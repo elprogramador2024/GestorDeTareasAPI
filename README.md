@@ -52,6 +52,4 @@ usuario : admin
 password: Admin052@
 
 ## API Publicada
-
-## API .NET
 https://gestordetareasapi-alkc.onrender.com
