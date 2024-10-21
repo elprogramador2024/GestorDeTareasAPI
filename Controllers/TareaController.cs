@@ -1,4 +1,5 @@
 ﻿using GestorDeTareas.Models;
+using GestorDeTareas.Models.Custom;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -26,15 +27,29 @@ namespace GestorDeTareas.Controllers
 
         [HttpGet]
         [Authorize(Roles = "Administrador,Supervisor")]
-        public async Task<IActionResult> GetAll(int userId)
+        public async Task<IActionResult> GetAll(int pgnum, int pgsize)
         {
-            var tareas = _db.Tareas.ToList();
-            return Ok(tareas);
+            if (pgnum <= 0) pgnum = 1;
+            if (pgsize <= 0) pgsize = 5;
+
+            var tareas = _db.Tareas.Skip((pgnum - 1) * pgsize).Take(pgsize).ToList();
+            var tot_items = _db.Tareas.Count();
+
+            PgResponse response = new()
+            {
+                Total = tot_items,
+                Pgnum = pgnum,
+                Pgsize = pgsize,
+                Totpages = (int)Math.Ceiling(tot_items / (double)pgsize),
+                Tareas = tareas
+            };
+            
+            return Ok(response);
         }
 
         [HttpGet("ByUser")]
         [Authorize]
-        public async Task<IActionResult> GetByUser(string username)
+        public async Task<IActionResult> GetByUser(string username, int pgnum, int pgsize)
         {            
             if (!await UserExists(username))
                 return BadRequest("Usuario no existe");
@@ -45,8 +60,22 @@ namespace GestorDeTareas.Controllers
             if (user_role == "Empleado" && username != user_name)
                 return BadRequest("Usuario Empleado solo puede ver sus tareas asignadas");
 
-            var tareas = _db.Tareas.Where((t) => t.UserName == username).OrderBy((t) => t.Id).ToList();
-            return Ok(tareas);
+            if (pgnum <= 0) pgnum = 1;
+            if (pgsize <= 0) pgsize = 5;
+
+            var tareas = _db.Tareas.Where((t) => t.UserName == username).Skip((pgnum - 1) * pgsize).Take(pgsize).OrderBy((t) => t.Id).ToList();
+            var tot_items = _db.Tareas.Count((t) => t.UserName == username);
+
+            PgResponse response = new()
+            {
+                Total = tot_items,
+                Pgnum = pgnum,
+                Pgsize = pgsize,
+                Totpages = (int)Math.Ceiling(tot_items / (double)pgsize),
+                Tareas = tareas
+            };
+
+            return Ok(response);
         }
 
         [HttpPost("insert")]
